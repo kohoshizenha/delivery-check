@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>配送曜日の確認</title>
+
+<style>
+body {
+  font-family: sans-serif;
+  margin: 0;
+  padding: 12px;
+}
+#box {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 12px;
+  max-width: 520px;
+}
+#result {
+  margin-top: 10px;
+  line-height: 1.6;
+}
+input {
+  padding: 6px 8px;
+  width: 180px;
+}
+button {
+  padding: 6px 10px;
+  margin-left: 6px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="box">
+  <div style="font-weight:600;margin-bottom:8px;">配送曜日の確認</div>
+
+  <input id="zip" type="text" placeholder="郵便番号（7桁）">
+  <button onclick="checkZip()">確認</button>
+
+  <div id="result">データ読み込み中…</div>
+</div>
+
+<script>
+var DATA_URL = 'delivery_day.csv'; // 同じフォルダに置く
+
+var data = {};
+
+function normalizeZip(v) {
+  return String(v || '').replace(/[^0-9]/g, '');
+}
+
+// CSV読み込み
+fetch(DATA_URL + '?v=' + Date.now())
+  .then(function (res) { return res.text(); })
+  .then(function (text) {
+    var lines = text.split(/\r?\n/);
+
+    for (var i = 1; i < lines.length; i++) {
+      var line = lines[i];
+      if (!line) continue;
+
+      var parts = line.split(',');
+      if (parts.length < 3) continue;
+
+      var zip  = normalizeZip(parts[0]);
+      var desc = parts.slice(2).join(',').trim();
+
+      if (zip.length === 7 && desc) {
+        data[zip] = desc;
+      }
+    }
+
+    document.getElementById('result').textContent =
+      '読み込み完了（' + Object.keys(data).length + '件）';
+  })
+  .catch(function () {
+    document.getElementById('result').textContent =
+      'データを読み込めませんでした';
+  });
+
+// 検索処理
+function checkZip() {
+  var zip = normalizeZip(document.getElementById('zip').value);
+  var result = document.getElementById('result');
+
+  if (zip.length !== 7) {
+    result.textContent = '郵便番号は7桁で入力してください';
+    return;
+  }
+
+  if (data[zip]) {
+    result.textContent = data[zip] + '（詳細はお問い合わせください）';
+  } else {
+    result.textContent = '該当する配送情報がありません';
+  }
+}
+
+// Enterキー対応
+document.getElementById('zip').addEventListener('keydown', function (e) {
+  if (e.key === 'Enter') {
+    checkZip();
+  }
+});
+</script>
+
+</body>
+</html>
